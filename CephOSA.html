@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ceph Object Storage Architecture</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #4ca1af, #c4e0e5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: #a0d2eb;
+            font-size: 1.2rem;
+        }
+        .architecture {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin: 40px 0;
+        }
+        .tier {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .component {
+            background: rgba(41, 50, 65, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            width: 200px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .component:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        .component h3 {
+            color: #ffd166;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        .component p {
+            color: #e5e5e5;
+            font-size: 0.9rem;
+        }
+        .icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        .connection {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        .line {
+            width: 3px;
+            height: 40px;
+            background: linear-gradient(to bottom, #4cc9f0, #4361ee);
+        }
+        .internet {
+            background: linear-gradient(135deg, #3a6186, #89253e);
+        }
+        .security {
+            background: linear-gradient(135deg, #414345, #232526);
+        }
+        .loadbalancer {
+            background: linear-gradient(135deg, #00416a, #e4e5e6);
+        }
+        .app {
+            background: linear-gradient(135deg, #2c3e50, #4ca1af);
+        }
+        .database {
+            background: linear-gradient(135deg, #5614b0, #dbd65c);
+        }
+        .storage {
+            background: linear-gradient(135deg, #800020, #ffa07a);
+        }
+        .comparison {
+            background: rgba(41, 50, 65, 0.6);
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 40px;
+        }
+        .comparison h2 {
+            color: #ffd166;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        th {
+            color: #4cc9f0;
+            font-weight: 600;
+        }
+        .pros-cons {
+            display: flex;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .pros, .cons {
+            flex: 1;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .pros {
+            background: rgba(0, 128, 0, 0.2);
+        }
+        .cons {
+            background: rgba(255, 0, 0, 0.2);
+        }
+        h4 {
+            margin-bottom: 15px;
+            color: #ffd166;
+        }
+        ul {
+            list-style-type: none;
+        }
+        li {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+        li:before {
+            content: "•";
+            color: #4cc9f0;
+            position: absolute;
+            left: 0;
+        }
+        .pros li:before {
+            color: #90ee90;
+        }
+        .cons li:before {
+            color: #ffcccb;
+        }
+        @media (max-width: 768px) {
+            .tier {
+                flex-direction: column;
+                align-items: center;
+            }
+            .pros-cons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ceph Object Storage Architecture</h1>
+            <p class="subtitle">A robust alternative to MinIO for distributed object storage</p>
+        </header>
+
+        <div class="architecture">
+            <!-- Internet Tier -->
+            <div class="tier">
+                <div class="component internet">
+                    <div class="icon">🌐</div>
+                    <h3>Internet</h3>
+                    <p>Public network access</p>
+                </div>
+            </div>
+
+            <div class="connection">
+                <div class="line"></div>
+            </div>
+
+            <!-- Security Tier -->
+            <div class="tier">
+                <div class="component security">
+                    <div class="icon">🛡️</div>
+                    <h3>Firewall</h3>
+                    <p>Network security layer</p>
+                </div>
+            </div>
+
+            <div class="connection">
+                <div class="line"></div>
+            </div>
+
+            <!-- Load Balancer Tier -->
+            <div class="tier">
+                <div class="component loadbalancer">
+                    <div class="icon">⚖️</div>
+                    <h3>Keepalived + Nginx</h3>
+                    <p>High availability load balancing</p>
+                </div>
+            </div>
+
+            <div class="connection">
+                <div class="line"></div>
+            </div>
+
+            <!-- Application Tier -->
+            <div class="tier">
+                <div class="component app">
+                    <div class="icon">🐈</div>
+                    <h3>Tomcat Instances</h3>
+                    <p>Multiple application servers (1..N)</p>
+                </div>
+            </div>
+
+            <div class="connection">
+                <div class="line"></div>
+            </div>
+
+            <!-- Data Tier -->
+            <div class="tier">
+                <div class="component database">
+                    <div class="icon">🐘</div>
+                    <h3>PostgreSQL</h3>
+                    <p>Relational database management system</p>
+                </div>
+                
+                <div class="component storage">
+                    <div class="icon">🦑</div>
+                    <h3>Ceph Cluster</h3>
+                    <p>Distributed object storage system</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="comparison">
+            <h2>Why Ceph Instead of MinIO?</h2>
+            
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>MinIO</th>
+                    <th>Ceph</th>
+                </tr>
+                <tr>
+                    <td>Storage Architecture</td>
+                    <td>Object storage only</td>
+                    <td>Unified storage (object, block, file)</td>
+                </tr>
+                <tr>
+                    <td>Scalability</td>
+                    <td>Good for object storage</td>
+                    <td>Excellent, designed for exabyte scale</td>
+                </tr>
+                <tr>
+                    <td>Ecosystem Maturity</td>
+                    <td>Newer but rapidly growing</td>
+                    <td>Mature, proven in production for years</td>
+                </tr>
+                <tr>
+                    <td>Data Durability</td>
+                    <td>Good (erasure coding)</td>
+                    <td>Excellent (advanced CRUSH algorithm)</td>
+                </tr>
+                <tr>
+                    <td>S3 Compatibility</td>
+                    <td>Excellent</td>
+                    <td>Excellent (RADOS Gateway)</td>
+                </tr>
+                <tr>
+                    <td>Deployment Complexity</td>
+                    <td>Simple</td>
+                    <td>More complex but more flexible</td>
+                </tr>
+            </table>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Advantages of Ceph</h4>
+                    <ul>
+                        <li>Unified storage system (object, block, file)</li>
+                        <li>Extremely scalable to exabyte level</li>
+                        <li>Self-healing and self-managing capabilities</li>
+                        <li>No single point of failure</li>
+                        <li>Strong consistency model</li>
+                        <li>Mature technology with large community</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Considerations</h4>
+                    <ul>
+                        <li>More complex to set up and maintain</li>
+                        <li>Requires more hardware resources</li>
+                        <li>Steeper learning curve</li>
+                        <li>Might be overkill for simple use cases</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple animation for components
+        document.addEventListener('DOMContentLoaded', function() {
+            const components = document.querySelectorAll('.component');
+            
+            components.forEach((component, index) => {
+                // Add staggered animation
+                component.style.opacity = '0';
+                component.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    component.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    component.style.opacity = '1';
+                    component.style.transform = 'translateY(0)';
+                }, 100 + (index * 100));
+            });
+        });
+    </script>
+</body>
+</html>
