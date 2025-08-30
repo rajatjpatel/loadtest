@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Monitoring Report</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .report-info {
+            display: flex;
+            justify-content: space-between;
+            background-color: var(--light-color);
+            padding: 15px 30px;
+            color: var(--dark-color);
+            font-size: 0.9rem;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 30px;
+            background-color: #f0f3f5;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .search-box {
+            flex-grow: 1;
+            margin-right: 20px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .filter-section {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: var(--primary-color);
+        }
+        
+        .content {
+            display: flex;
+            min-height: 600px;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background-color: var(--light-color);
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+        }
+        
+        .file-list {
+            list-style: none;
+        }
+        
+        .file-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .file-item:hover {
+            background-color: #e0e7eb;
+        }
+        
+        .file-item.active {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .file-size {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+        }
+        
+        .file-item.active .file-size {
+            color: #ecf0f1;
+        }
+        
+        .main-content {
+            flex-grow: 1;
+            padding: 0;
+            overflow-y: auto;
+        }
+        
+        .file-content {
+            padding: 25px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+            background-color: white;
+            height: 100%;
+            overflow: auto;
+        }
+        
+        .section-header {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 15px 25px;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #7f8c8d;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #bdc3c7;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 25px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .card h3 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        .card p {
+            margin-bottom: 8px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-running {
+            background-color: #e8f5e9;
+            color: var(--success-color);
+        }
+        
+        .status-stopped {
+            background-color: #ffebee;
+            color: var(--danger-color);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 300px;
+                border-right: none;
+                border-bottom: 1px solid #ddd;
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .search-box {
+                margin-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Server Monitoring Report</h1>
+            <p>Comprehensive system, Tomcat, and PostgreSQL analysis</p>
+        </header>
+        
+        <div class="report-info">
+            <div class="report-date">Generated on: <span id="report-date">Loading...</span></div>
+            <div class="report-dir">From directory: <span id="report-dir">Loading...</span></div>
+        </div>
+        
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search across all files...">
+            </div>
+            <div class="filter-section">
+                <button id="btn-refresh">Refresh Data</button>
+                <button id="btn-summary">Show Summary</button>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="sidebar">
+                <h3 class="section-header">Report Files</h3>
+                <ul class="file-list" id="file-list">
+                    <li class="file-item">Loading files...</li>
+                </ul>
+            </div>
+            
+            <div class="main-content">
+                <div class="section-header">
+                    <span id="current-file">Select a file to view</span>
+                    <span id="file-size"></span>
+                </div>
+                
+                <div id="file-content" class="file-content">
+                    <div class="empty-state">
+                        <i>📊</i>
+                        <h3>No file selected</h3>
+                        <p>Select a file from the sidebar to view its contents</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Server Monitoring Report &bull; Generated by System Monitoring Script</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileList = document.getElementById('file-list');
+            const fileContent = document.getElementById('file-content');
+            const currentFile = document.getElementById('current-file');
+            const fileSize = document.getElementById('file-size');
+            const searchInput = document.getElementById('search-input');
+            const btnRefresh = document.getElementById('btn-refresh');
+            const btnSummary = document.getElementById('btn-summary');
+            const reportDate = document.getElementById('report-date');
+            const reportDir = document.getElementById('report-dir');
+            
+            let allFiles = [];
+            let currentDir = '';
+            
+            // Function to fetch the list of text files
+            async function loadFileList() {
+                try {
+                    // In a real implementation, this would be an API call to get the file list
+                    // For demonstration, we'll simulate loading files
+                    fileList.innerHTML = '<li class="file-item">Loading files...</li>';
+                    
+                    // Simulate API call delay
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    
+                    // This is a simulation - in reality, you would fetch this from a server endpoint
+                    const simulatedFiles = [
+                        { name: 'SUMMARY_REPORT.txt', size: '4.2 KB' },
+                        { name: 'hostnamectl.txt', size: '1.1 KB' },
+                        { name: 'kernel_info.txt', size: '0.5 KB' },
+                        { name: 'os_version.txt', size: '0.2 KB' },
+                        { name: 'uptime.txt', size: '0.1 KB' },
+                        { name: 'current_users.txt', size: '0.3 KB' },
+                        { name: 'last_logins.txt', size: '1.8 KB' },
+                        { name: 'cpu_info.txt', size: '2.3 KB' },
+                        { name: 'memory_info.txt', size: '0.4 KB' },
+                        { name: 'disk_usage.txt', size: '1.5 KB' },
+                        { name: 'block_devices.txt', size: '1.2 KB' },
+                        { name: 'disk_partitions.txt', size: '3.4 KB' },
+                        { name: 'network_interfaces.txt', size: '2.7 KB' },
+                        { name: 'routing_table.txt', size: '0.8 KB' },
+                        { name: 'listening_ports.txt', size: '1.9 KB' },
+                        { name: 'top_snapshot.txt', size: '5.6 KB' },
+                        { name: 'top_cpu_processes.txt', size: '2.1 KB' },
+                        { name: 'top_memory_processes.txt', size: '2.3 KB' },
+                        { name: 'tomcat_processes.txt', size: '1.2 KB' },
+                        { name: 'postgresql_processes.txt', size: '1.5 KB' },
+                        { name: 'postgresql_databases.txt', size: '1.8 KB' }
+                    ];
+                    
+                    allFiles = simulatedFiles;
+                    currentDir = '/tmp/server_report_20231115_143022';
+                    
+                    // Update UI
+                    reportDate.textContent = new Date().toLocaleString();
+                    reportDir.textContent = currentDir;
+                    
+                    renderFileList(simulatedFiles);
+                } catch (error) {
+                    console.error('Error loading file list:', error);
+                    fileList.innerHTML = '<li class="file-item">Error loading files</li>';
+                }
+            }
+            
+            // Function to render the file list
+            function renderFileList(files) {
+                fileList.innerHTML = '';
+                
+                if (files.length === 0) {
+                    fileList.innerHTML = '<li class="file-item">No text files found</li>';
+                    return;
+                }
+                
+                files.forEach(file => {
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    li.innerHTML = `
+                        <span>${file.name}</span>
+                        <span class="file-size">${file.size}</span>
+                    `;
+                    
+                    li.addEventListener('click', () => {
+                        // Remove active class from all items
+                        document.querySelectorAll('.file-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                        
+                        // Add active class to clicked item
+                        li.classList.add('active');
+                        
+                        // Load file content
+                        loadFileContent(file.name);
+                    });
+                    
+                    fileList.appendChild(li);
+                });
+            }
+            
+            // Function to load and display file content
+            async function loadFileContent(filename) {
+                try {
+                    fileContent.innerHTML = '<div class="empty-state">Loading content...</div>';
+                    currentFile.textContent = filename;
+                    fileSize.textContent = getFileSize(filename);
+                    
+                    // In a real implementation, this would fetch the file content from the server
+                    // Simulate API call delay
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Generate sample content based on filename
+                    let content = '';
+                    
+                    if (filename === 'SUMMARY_REPORT.txt') {
+                        content = `SYSTEM MONITORING SUMMARY REPORT
+Generated: 2023-11-15 14:30:25
+
+SYSTEM INFORMATION:
+-------------------
+Hostname: server01.example.com
+OS Version: Red Hat Enterprise Linux Server release 7.9 (Maipo)
+Kernel: 3.10.0-1160.45.1.el7.x86_64
+Uptime: 45 days, 12 hours, 35 minutes
+
+HARDWARE SUMMARY:
+----------------
+CPU: Intel(R) Xeon(R) CPU E5-2670 v3 @ 2.30GHz
+CPU Cores: 24
+Memory: 62G
+Disk Usage: 78% of 1.8T
+
+CURRENT LOAD:
+-------------
+Load Average: 2.45, 3.21, 4.05
+CPU Usage: 15.2% us, 2.1% sy, 0.5% ni, 81.8% id, 0.4% wa, 0.0% hi, 0.0% si
+Memory Usage: 68.42%
+
+SERVICES STATUS:
+---------------
+Tomcat: RUNNING (PID: 12345 12346)
+PostgreSQL: RUNNING
+  - Total Connections: 24
+  - Active Connections: 12
+  - Unique Users Connected: 5
+
+TOP PROCESSES BY CPU:
+--------------------
+user     12345  2.3  0.5 5123456 124500 ?   Ssl   Oct30  45:20 /usr/bin/java
+root     23456  1.8  0.2 1234567  85600 ?   Ss    Nov01  22:15 /usr/bin/postgres
+
+TOP PROCESSES BY MEMORY:
+-----------------------
+user     12345  2.3  5.2 5123456 124500 ?   Ssl   Oct30  45:20 /usr/bin/java
+root     23456  1.8  3.1 1234567  85600 ?   Ss    Nov01  22:15 /usr/bin/postgres`;
+                    } else if (filename === 'cpu_info.txt') {
+                        content = `Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                24
+On-line CPU(s) list:   0-23
+Thread(s) per core:    2
+Core(s) per socket:    12
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 63
+Model name:            Intel(R) Xeon(R) CPU E5-2670 v3 @ 2.30GHz
+Stepping:              2
+CPU MHz:               2299.998
+BogoMIPS:              4599.99
+Hypervisor vendor:     VMware
+Virtualization type:   full
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              256K
+L3 cache:              30720K
+NUMA node0 CPU(s):     0-23`;
+                    } else {
+                        content = `This is sample content for ${filename}.\n\n`;
+                        content += `The actual content would be loaded from the server in a real implementation.\n\n`;
+                        content += `File: ${filename}\n`;
+                        content += `Directory: ${currentDir}\n`;
+                        content += `Generated: ${new Date().toLocaleString()}\n\n`;
+                        
+                        // Add some sample system information
+                        content += `Sample system information:\n`;
+                        content += `- Load average: 2.45, 3.21, 4.05\n`;
+                        content += `- Memory usage: 68.42%\n`;
+                        content += `- Disk usage: 78% of 1.8T\n`;
+                        content += `- Active processes: 243\n`;
+                    }
+                    
+                    fileContent.textContent = content;
+                } catch (error) {
+                    console.error('Error loading file content:', error);
+                    fileContent.innerHTML = '<div class="empty-state">Error loading file content</div>';
+                }
+            }
+            
+            // Helper function to get file size (simulated)
+            function getFileSize(filename) {
+                const file = allFiles.find(f => f.name === filename);
+                return file ? file.size : 'Unknown';
+            }
+            
+            // Event listeners
+            btnRefresh.addEventListener('click', loadFileList);
+            
+            btnSummary.addEventListener('click', () => {
+                // Find and click the summary file
+                const summaryItem = Array.from(fileList.children).find(
+                    item => item.textContent.includes('SUMMARY_REPORT.txt')
+                );
+                
+                if (summaryItem) {
+                    summaryItem.click();
+                }
+            });
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm) {
+                    const filteredFiles = allFiles.filter(file => 
+                        file.name.toLowerCase().includes(searchTerm)
+                    );
+                    renderFileList(filteredFiles);
+                } else {
+                    renderFileList(allFiles);
+                }
+            });
+            
+            // Initialize
+            loadFileList();
+        });
+    </script>
+</body>
+</html>
